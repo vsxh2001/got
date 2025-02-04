@@ -6,7 +6,7 @@ repos:
         files: ^backend/
         args: [--fix]
       - id: ruff-format
-        files: ^backend/
+        files: \.py$
   
   # Prettier for code formatting
   - repo: https://github.com/pre-commit/mirrors-prettier
@@ -14,5 +14,5 @@ repos:
     hooks:
       - id: prettier
         args: ["--write"]  # Auto-format the files
-        files: ^frontend/\.((js|jsx|ts|tsx|json|css|scss|md)$)
+        files: \.((js|jsx|ts|tsx|json|css|scss|md)$)
 
