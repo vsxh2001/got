@@ -1,4 +1,4 @@
-from db.models.seasons import Season
+from db.models import Season
 from app.main import app
 from db.interface import get_session
 from fastapi import Depends, HTTPException
