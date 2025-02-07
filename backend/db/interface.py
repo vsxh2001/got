@@ -8,11 +8,10 @@ engine = create_async_engine(DATABASE_URL)
 
 
 async def create_database(hard: bool = False):
-    SQLModel.metadata.clear()
-    SQLModel.metadata.tables["seasons"] = Season.__table__
-    if hard:
-        SQLModel.metadata.drop_all(engine)
-    SQLModel.metadata.create_all(engine)
+    async with engine.begin() as conn:
+        if hard:
+            await conn.run_sync(SQLModel.metadata.drop_all)
+        await conn.run_sync(SQLModel.metadata.create_all)
 
 
 async def get_session() -> AsyncSession:

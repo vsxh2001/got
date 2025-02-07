@@ -54,6 +54,7 @@ async def create_season(
     Returns:
         Season: The newly created season.
     """
+    season = Season.model_validate(season.model_dump())
     if season.id is not None:
         raise HTTPException(status_code=400, detail="ID must be None")
     if season.name is None:
@@ -79,6 +80,7 @@ async def update_season(
     Returns:
         Season: The updated season object.
     """
+    season = Season.model_validate(season.model_dump())
     result = await db.exec(select(Season).filter_by(id=id))
     existing_season = result.scalars().first()
     if existing_season is None:
