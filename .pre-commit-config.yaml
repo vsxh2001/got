@@ -15,14 +15,5 @@ repos:
       - id: prettier
         args: ["--write"]  # Auto-format the files
         files: \.((js|jsx|ts|tsx|json|css|scss|md)$)
-
-  - repo: local
-    hooks:
-      - id: py2ts
-        name: py2ts
-        language: system
-        entry: scripts/py2ts.sh
-        pass_filenames: false
-        always_run: true
         
 
