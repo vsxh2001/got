@@ -1,15 +1,16 @@
 from db.models import Season
-from app.main import app
 from db.interface import get_session
 from fastapi import Depends, HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from typing import List
+from fastapi import APIRouter
 
-@app.get("/seasons", response_model=List[Season])
-async def list_seasons(
-    db: AsyncSession = Depends(get_session)
-) -> List[Season]:
+router = APIRouter()
+
+
+@router.get("/seasons", response_model=List[Season])
+async def list_seasons(db: AsyncSession = Depends(get_session)) -> List[Season]:
     """
     Lists all seasons.
 
@@ -22,7 +23,8 @@ async def list_seasons(
     result = await db.exec(select(Season))
     return result.scalars().all()
 
-@app.get("/seasons/{id}", response_model=Season)
+
+@router.get("/seasons/{id}", response_model=Season)
 async def get_season(id: int, db: AsyncSession = Depends(get_session)) -> Season:
     """
     Retrieves a season by its ID.
@@ -37,7 +39,8 @@ async def get_season(id: int, db: AsyncSession = Depends(get_session)) -> Season
     result = await db.exec(select(Season).filter_by(id=id))
     return result.scalars().first()
 
-@app.post("/seasons", response_model=Season)
+
+@router.post("/seasons", response_model=Season)
 async def create_season(
     season: Season, db: AsyncSession = Depends(get_session)
 ) -> Season:
@@ -60,7 +63,8 @@ async def create_season(
     await db.refresh(season)
     return season
 
-@app.patch("/seasons/{id}", response_model=Season)
+
+@router.patch("/seasons/{id}", response_model=Season)
 async def update_season(
     id: int, season: Season, db: AsyncSession = Depends(get_session)
 ) -> Season:
@@ -78,13 +82,14 @@ async def update_season(
     result = await db.exec(select(Season).filter_by(id=id))
     existing_season = result.scalars().first()
     if existing_season is None:
-        raise HTTPException(status_code=404, detail="Season not found")        
+        raise HTTPException(status_code=404, detail="Season not found")
     existing_season.update_from_dict(season.model_dump(exclude_unset=True))
     await db.commit()
     await db.refresh(existing_season)
     return existing_season
 
-@app.delete("/seasons/{id}")
+
+@router.delete("/seasons/{id}")
 async def delete_season(id: int, db: AsyncSession = Depends(get_session)):
     """
     Deletes a season by its ID.
