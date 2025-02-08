@@ -1,10 +1,11 @@
-from db.models import Season
+from db.models import Season, EventStatus
 from db.interface import get_session
 from fastapi import Depends, HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from typing import List
 from fastapi import APIRouter
+from datetime import datetime
 
 router = APIRouter()
 
@@ -20,8 +21,8 @@ async def list_seasons(db: AsyncSession = Depends(get_session)) -> List[Season]:
     Returns:
         List[Season]: A list of all existing seasons.
     """
-    result = await db.exec(select(Season))
-    return result.scalars().all()
+    result = await db.scalars(select(Season))
+    return result.all()
 
 
 @router.get("/seasons/{id}", response_model=Season)
@@ -36,8 +37,8 @@ async def get_season(id: int, db: AsyncSession = Depends(get_session)) -> Season
     Returns:
         Season: The season object with the specified ID.
     """
-    result = await db.exec(select(Season).filter_by(id=id))
-    return result.scalars().first()
+    season = await db.get(Season, id)
+    return season
 
 
 @router.post("/seasons", response_model=Season)
@@ -81,8 +82,7 @@ async def update_season(
         Season: The updated season object.
     """
     season = Season.model_validate(season.model_dump())
-    result = await db.exec(select(Season).filter_by(id=id))
-    existing_season = result.scalars().first()
+    existing_season = await db.get(Season, id)
     if existing_season is None:
         raise HTTPException(status_code=404, detail="Season not found")
     existing_season.update_from_dict(season.model_dump(exclude_unset=True))
@@ -100,9 +100,57 @@ async def delete_season(id: int, db: AsyncSession = Depends(get_session)):
         id (int): The ID of the season to delete.
         db (AsyncSession): The database session.
     """
-    result = await db.exec(select(Season).filter_by(id=id))
-    season = result.scalars().first()
+    season = await db.get(Season, id)
     if season is None:
         raise HTTPException(status_code=404, detail="Season not found")
     db.delete(season)
     await db.commit()
+
+
+@router.post("/seasons/{id}/start")
+async def start_season(id: int, db: AsyncSession = Depends(get_session)):
+    """
+    Starts a season by its ID.
+
+    Args:
+        id (int): The ID of the season to start.
+        db (AsyncSession): The database session.
+
+    Returns:
+        Season: The updated season object.
+    """
+    season = await db.get(Season, id)
+    if season is None:
+        raise HTTPException(status_code=404, detail="Season not found")
+    if season.status != EventStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Season is not pending")
+    season.status = EventStatus.ONGOING
+    season.start = datetime.now()
+    await db.commit()
+    await db.refresh(season)
+    return season
+
+
+@router.post("/seasons/{id}/end")
+async def end_season(id: int, db: AsyncSession = Depends(get_session)):
+    """
+    Ends a season by its ID.
+
+    Args:
+        id (int): The ID of the season to end.
+        db (AsyncSession): The database session.
+
+    Returns:
+        Season: The updated season object.
+    """
+
+    season = await db.get(Season, id)
+    if season is None:
+        raise HTTPException(status_code=404, detail="Season not found")
+    if season.status != EventStatus.ONGOING:
+        raise HTTPException(status_code=400, detail="Season is not active")
+    season.status = EventStatus.COMPLETED
+    season.end = datetime.now()
+    await db.commit()
+    await db.refresh(season)
+    return season

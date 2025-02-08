@@ -1,2 +1,2 @@
 from .seasons import Season
-from .event import Event
+from .event import Event, EventStatus
