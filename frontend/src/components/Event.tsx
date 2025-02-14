@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { Event, EventStatus } from "../api_types/models";
 import { Link } from "react-router-dom";
 
-interface EventApi {
+export interface EventApi {
   get(id: number): Promise<Event>;
   list(): Promise<Event[]>;
   create(event: Event): Promise<Event>;
   update(id: number, event: Event): Promise<Event>;
   delete(id: number): Promise<void>;
-  start(id: number): Promise<void>;
-  end(id: number): Promise<void>;
+  start(id: number): Promise<Event>;
+  end(id: number): Promise<Event>;
 }
 
 interface EventTableProps {
