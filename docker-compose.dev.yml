@@ -1,0 +1,26 @@
+services:
+  database:
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=got
+
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-d", "got"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@database:5432/got
+    ports:
+      - "8000:8000"
+    depends_on:
+      - database
+    volumes:
+      - ./backend:/app
