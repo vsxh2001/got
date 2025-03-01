@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Event, EventStatus } from "../api_types/models";
 import { Link } from "react-router-dom";
 
@@ -48,90 +48,133 @@ const EventStatusTable = ({
   onDelete: (id: number) => Promise<void>;
   view_url: string;
 }) => {
+  // Track events with animation states
+  const [animatingEvents, setAnimatingEvents] = useState<
+    Record<number, string>
+  >({});
+
+  // Handle event deletion with animation
+  const handleDelete = async (id: number) => {
+    // Set fade out animation
+    setAnimatingEvents((prev) => ({ ...prev, [id]: "animate-fade-out" }));
+
+    // Wait for animation to complete before actual deletion
+    setTimeout(async () => {
+      await onDelete(id);
+    }, 400); // Match the animation duration
+  };
+
+  // Handle event start with animation
+  const handleStart = async (id: number) => {
+    // Set slide out animation
+    setAnimatingEvents((prev) => ({ ...prev, [id]: "animate-slide-out-left" }));
+
+    // Wait for animation to complete before actual start
+    setTimeout(async () => {
+      await onStart(id);
+    }, 500); // Match the animation duration
+  };
+
+  // Handle event end with animation
+  const handleEnd = async (id: number) => {
+    // Set slide out animation
+    setAnimatingEvents((prev) => ({ ...prev, [id]: "animate-slide-out-left" }));
+
+    // Wait for animation to complete before actual end
+    setTimeout(async () => {
+      await onEnd(id);
+    }, 500); // Match the animation duration
+  };
+
   return (
     <div className="mb-8">
       <h2 className="text-2xl font-bold text-indigo-300 mb-4 capitalize">
         {status} Events
       </h2>
-      <div className="bg-slate-800/50 ring-1 ring-gray-700/50 rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-700">
-          <thead className="bg-slate-700/50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Start
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                End
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-700">
-            {events.map((event) => (
-              <tr
-                key={event.id}
-                className="hover:bg-slate-700/30 transition-colors"
-              >
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                  {event.name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                  {new Date(event.start!).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                  {new Date(event.end!).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {events.length === 0 ? (
+          <div className="col-span-full bg-slate-800/50 ring-1 ring-gray-700/50 rounded-lg p-6 text-center text-sm text-gray-400">
+            No {status} events found
+          </div>
+        ) : (
+          events.map((event) => (
+            <div
+              key={event.id}
+              className={`bg-slate-800/50 ring-1 ring-gray-700/50 rounded-lg overflow-hidden hover:ring-indigo-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/10 ${
+                animatingEvents[event.id!] || "animate-fade-in"
+              }`}
+            >
+              <div className="p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-lg font-medium text-gray-200">
+                    {event.name}
+                  </h3>
+                  <span
+                    className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                      status === "pending"
+                        ? "bg-blue-900/50 text-blue-300"
+                        : status === "ongoing"
+                          ? "bg-green-900/50 text-green-300"
+                          : "bg-purple-900/50 text-purple-300"
+                    }`}
+                  >
+                    {status}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-400 mb-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium">Start:</span>
+                    <span>
+                      {event.start
+                        ? new Date(event.start).toLocaleDateString()
+                        : "Not started"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">End:</span>
+                    <span>
+                      {event.end
+                        ? new Date(event.end).toLocaleDateString()
+                        : "Not ended"}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
                   <Link
                     to={`${view_url}/${event.id}`}
-                    className="inline-block bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded text-sm font-medium text-white transition-colors"
+                    className="inline-block bg-indigo-600 hover:bg-indigo-500 px-3 py-1 rounded text-sm font-medium text-white transition-colors"
                   >
                     View
                   </Link>
 
                   {status === "pending" && (
                     <ActionButton
-                      onClick={() => onStart(event.id!)}
+                      onClick={() => handleStart(event.id!)}
                       label="Start"
-                      colorClass="bg-green-600 hover:bg-green-700 text-white"
+                      colorClass="bg-green-600 hover:bg-green-500 text-white"
                     />
                   )}
 
                   {status === "ongoing" && (
                     <ActionButton
-                      onClick={() => onEnd(event.id!)}
+                      onClick={() => handleEnd(event.id!)}
                       label="End"
-                      colorClass="bg-yellow-600 hover:bg-yellow-700 text-white"
+                      colorClass="bg-yellow-600 hover:bg-yellow-500 text-white"
                     />
                   )}
 
                   {status !== "completed" && (
                     <ActionButton
-                      onClick={() => onDelete(event.id!)}
+                      onClick={() => handleDelete(event.id!)}
                       label="Delete"
-                      colorClass="bg-red-600 hover:bg-red-700 text-white"
+                      colorClass="bg-red-600 hover:bg-red-500 text-white"
                     />
                   )}
-                </td>
-              </tr>
-            ))}
-            {events.length === 0 && (
-              <tr>
-                <td
-                  colSpan={4}
-                  className="px-6 py-4 text-center text-sm text-gray-400"
-                >
-                  No {status} events found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -143,7 +186,25 @@ interface AddEventFormProps {
 
 function AddEventForm({ onSubmit }: AddEventFormProps) {
   const [name, setName] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [formAnimation, setFormAnimation] = useState("animate-fade-in");
+
+  const resetForm = () => {
+    setName("");
+    setStartDate("");
+    setEndDate("");
+  };
+
+  const handleCancel = () => {
+    setFormAnimation("animate-fade-out");
+    setTimeout(() => {
+      resetForm();
+      setShowForm(false);
+    }, 400); // Match animation duration
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,38 +212,155 @@ function AddEventForm({ onSubmit }: AddEventFormProps) {
 
     setIsSubmitting(true);
     try {
+      // Process dates with default time of midnight
+      let startDateTime = null;
+      let endDateTime = null;
+
+      if (startDate) {
+        const dateObj = new Date(startDate);
+        dateObj.setHours(0, 0, 0, 0); // Set to midnight
+        startDateTime = dateObj.toISOString();
+      }
+
+      if (endDate) {
+        const dateObj = new Date(endDate);
+        dateObj.setHours(0, 0, 0, 0); // Set to midnight
+        endDateTime = dateObj.toISOString();
+      }
+
       await onSubmit({
         name,
         status: "pending",
-        start: null,
-        end: null,
+        start: startDateTime,
+        end: endDateTime,
       });
-      setName(""); // Reset form
+
+      // Animate form out before hiding
+      setFormAnimation("animate-fade-out");
+      setTimeout(() => {
+        resetForm();
+        setShowForm(false);
+        // Reset animation for next time
+        setFormAnimation("animate-fade-in");
+      }, 400);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="mb-8 space-y-4">
-      <div className="flex gap-4">
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Enter event name"
-          className="flex-1 px-4 py-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-indigo-500"
-          disabled={isSubmitting}
-        />
+  if (!showForm) {
+    return (
+      <div className="mb-8">
         <button
-          type="submit"
-          disabled={isSubmitting || !name.trim()}
-          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          onClick={() => setShowForm(true)}
+          className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-500 hover:to-purple-500 transition-all duration-300 font-medium shadow-md hover:shadow-lg hover:shadow-indigo-500/20 flex items-center"
         >
-          {isSubmitting ? "Adding..." : "Add Event"}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 mr-2"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+              clipRule="evenodd"
+            />
+          </svg>
+          Add New Event
         </button>
       </div>
-    </form>
+    );
+  }
+
+  return (
+    <div className="mb-8">
+      <div
+        className={`bg-slate-800/70 ring-1 ring-gray-700/50 rounded-lg p-6 shadow-lg ${formAnimation}`}
+      >
+        <h3 className="text-xl font-bold text-indigo-300 mb-4">
+          Add New Event
+        </h3>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            {/* Event Name */}
+            <div>
+              <label
+                htmlFor="event-name"
+                className="block text-sm font-medium text-gray-300 mb-1"
+              >
+                Event Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="event-name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter event name"
+                className="w-full px-4 py-2 rounded-lg bg-gray-700/70 text-white border border-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition-all"
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+
+            {/* Start Date */}
+            <div>
+              <label
+                htmlFor="start-date"
+                className="block text-sm font-medium text-gray-300 mb-1"
+              >
+                Start Date
+              </label>
+              <input
+                id="start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg bg-gray-700/70 text-white border border-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition-all"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            {/* End Date */}
+            <div>
+              <label
+                htmlFor="end-date"
+                className="block text-sm font-medium text-gray-300 mb-1"
+              >
+                End Date
+              </label>
+              <input
+                id="end-date"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg bg-gray-700/70 text-white border border-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition-all"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            {/* Form Actions */}
+            <div className="flex justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || !name.trim()}
+                className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-medium"
+              >
+                {isSubmitting ? "Adding..." : "Submit"}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
 
@@ -190,6 +368,7 @@ export function EventTable({ event_api, view_url }: EventTableProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [newEventId, setNewEventId] = useState<number | null>(null);
 
   const fetchEvents = async () => {
     try {
@@ -199,7 +378,6 @@ export function EventTable({ event_api, view_url }: EventTableProps) {
     } catch (err) {
       setError("Failed to fetch events");
       console.error("Error fetching events:", err);
-      setEvents([]); // Ensure events is an empty array when there's an error
     } finally {
       setLoading(false);
     }
@@ -207,80 +385,96 @@ export function EventTable({ event_api, view_url }: EventTableProps) {
 
   useEffect(() => {
     fetchEvents();
-  }, [event_api]);
+  }, []);
 
-  const handleStart = async (id: number) => {
+  const handleAddEvent = async (event: Omit<Event, "id">) => {
     try {
-      await event_api.start(id);
-      await fetchEvents(); // Refresh the list
-    } catch (err) {
-      console.error("Error starting event:", err);
-      setError("Failed to start event");
-    }
-  };
+      const newEvent = await event_api.create(event as Event);
+      // Set the new event ID to highlight it
+      setNewEventId(newEvent.id!);
 
-  const handleEnd = async (id: number) => {
-    try {
-      await event_api.end(id);
-      await fetchEvents(); // Refresh the list
-    } catch (err) {
-      console.error("Error ending event:", err);
-      setError("Failed to end event");
-    }
-  };
+      // Clear the highlight after animation completes
+      setTimeout(() => {
+        setNewEventId(null);
+      }, 2000);
 
-  const handleDelete = async (id: number) => {
-    try {
-      await event_api.delete(id);
-      await fetchEvents(); // Refresh the list
-    } catch (err) {
-      console.error("Error deleting event:", err);
-      setError("Failed to delete event");
-    }
-  };
-
-  const handleAddEvent = async (newEvent: Omit<Event, "id">) => {
-    try {
-      await event_api.create(newEvent);
       await fetchEvents();
     } catch (err) {
-      setError("Failed to create event");
-      console.error("Error creating event:", err);
+      console.error("Error adding event:", err);
+    }
+  };
+
+  const handleStartEvent = async (id: number) => {
+    try {
+      await event_api.start(id);
+      await fetchEvents();
+    } catch (err) {
+      console.error("Error starting event:", err);
+    }
+  };
+
+  const handleEndEvent = async (id: number) => {
+    try {
+      await event_api.end(id);
+      await fetchEvents();
+    } catch (err) {
+      console.error("Error ending event:", err);
+    }
+  };
+
+  const handleDeleteEvent = async (id: number) => {
+    try {
+      await event_api.delete(id);
+      await fetchEvents();
+    } catch (err) {
+      console.error("Error deleting event:", err);
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-[200px]">
-        <div className="text-indigo-300">Loading events...</div>
-      </div>
-    );
+    return <div>Loading events...</div>;
   }
 
   if (error) {
-    return (
-      <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 text-red-300">
-        {error}
-      </div>
-    );
+    return <div className="text-red-500">{error}</div>;
   }
 
-  const statuses: EventStatus[] = ["pending", "ongoing", "completed"];
+  const pendingEvents = events.filter((event) => event.status === "pending");
+  const ongoingEvents = events.filter((event) => event.status === "ongoing");
+  const completedEvents = events.filter(
+    (event) => event.status === "completed",
+  );
 
   return (
-    <div className="space-y-8">
+    <div>
       <AddEventForm onSubmit={handleAddEvent} />
-      {statuses.map((status) => (
-        <EventStatusTable
-          key={status}
-          events={events.filter((event) => event.status === status)}
-          status={status}
-          onStart={handleStart}
-          onEnd={handleEnd}
-          onDelete={handleDelete}
-          view_url={view_url}
-        />
-      ))}
+
+      <EventStatusTable
+        events={pendingEvents}
+        status="pending"
+        onStart={handleStartEvent}
+        onEnd={handleEndEvent}
+        onDelete={handleDeleteEvent}
+        view_url={view_url}
+      />
+
+      <EventStatusTable
+        events={ongoingEvents}
+        status="ongoing"
+        onStart={handleStartEvent}
+        onEnd={handleEndEvent}
+        onDelete={handleDeleteEvent}
+        view_url={view_url}
+      />
+
+      <EventStatusTable
+        events={completedEvents}
+        status="completed"
+        onStart={handleStartEvent}
+        onEnd={handleEndEvent}
+        onDelete={handleDeleteEvent}
+        view_url={view_url}
+      />
     </div>
   );
 }
