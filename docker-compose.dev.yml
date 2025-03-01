@@ -5,13 +5,15 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=got
+    ports:
+      - "5432:5432"
 
     healthcheck:
-      test: ["CMD", "pg_isready", "-q", "-d", "got"]
-      interval: 10s
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "got"]
+      interval: 10s 
       timeout: 5s
       retries: 5
-    
+
   backend:
     build:
       context: ./backend
@@ -21,6 +23,20 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - database
+      database:
+        condition: service_healthy
     volumes:
       - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
