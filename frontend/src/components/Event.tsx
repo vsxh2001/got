@@ -40,6 +40,7 @@ const EventStatusTable = ({
   onEnd,
   onDelete,
   view_url,
+  event_name = "Event",
 }: {
   events: Event[];
   status: EventStatus;
@@ -47,6 +48,7 @@ const EventStatusTable = ({
   onEnd: (id: number) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   view_url: string;
+  event_name?: string;
 }) => {
   // Track events with animation states
   const [animatingEvents, setAnimatingEvents] = useState<
@@ -89,12 +91,12 @@ const EventStatusTable = ({
   return (
     <div className="mb-8">
       <h2 className="text-2xl font-bold text-indigo-300 mb-4 capitalize">
-        {status} Events
+        {status} {event_name}s
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {events.length === 0 ? (
           <div className="col-span-full bg-slate-800/50 ring-1 ring-gray-700/50 rounded-lg p-6 text-center text-sm text-gray-400">
-            No {status} events found
+            No {status} {event_name.toLowerCase()}s found
           </div>
         ) : (
           events.map((event) => (
@@ -182,9 +184,10 @@ const EventStatusTable = ({
 
 interface AddEventFormProps {
   onSubmit: (event: Omit<Event, "id">) => Promise<void>;
+  event_name?: string;
 }
 
-function AddEventForm({ onSubmit }: AddEventFormProps) {
+function AddEventForm({ onSubmit, event_name = "Event" }: AddEventFormProps) {
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -267,7 +270,7 @@ function AddEventForm({ onSubmit }: AddEventFormProps) {
               clipRule="evenodd"
             />
           </svg>
-          Add New Event
+          Add New {event_name}
         </button>
       </div>
     );
@@ -279,7 +282,7 @@ function AddEventForm({ onSubmit }: AddEventFormProps) {
         className={`bg-slate-800/70 ring-1 ring-gray-700/50 rounded-lg p-6 shadow-lg ${formAnimation}`}
       >
         <h3 className="text-xl font-bold text-indigo-300 mb-4">
-          Add New Event
+          Add New {event_name}
         </h3>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
@@ -289,7 +292,7 @@ function AddEventForm({ onSubmit }: AddEventFormProps) {
                 htmlFor="event-name"
                 className="block text-sm font-medium text-gray-300 mb-1"
               >
-                Event Name <span className="text-red-500">*</span>
+                {event_name} Name <span className="text-red-500">*</span>
               </label>
               <input
                 id="event-name"
@@ -364,7 +367,11 @@ function AddEventForm({ onSubmit }: AddEventFormProps) {
   );
 }
 
-export function EventTable({ event_api, view_url }: EventTableProps) {
+export function EventTable({
+  event_api,
+  view_url,
+  event_name = "Event",
+}: EventTableProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -447,7 +454,7 @@ export function EventTable({ event_api, view_url }: EventTableProps) {
 
   return (
     <div>
-      <AddEventForm onSubmit={handleAddEvent} />
+      <AddEventForm onSubmit={handleAddEvent} event_name={event_name} />
 
       <EventStatusTable
         events={pendingEvents}
@@ -456,6 +463,7 @@ export function EventTable({ event_api, view_url }: EventTableProps) {
         onEnd={handleEndEvent}
         onDelete={handleDeleteEvent}
         view_url={view_url}
+        event_name={event_name}
       />
 
       <EventStatusTable
@@ -465,6 +473,7 @@ export function EventTable({ event_api, view_url }: EventTableProps) {
         onEnd={handleEndEvent}
         onDelete={handleDeleteEvent}
         view_url={view_url}
+        event_name={event_name}
       />
 
       <EventStatusTable
@@ -474,6 +483,7 @@ export function EventTable({ event_api, view_url }: EventTableProps) {
         onEnd={handleEndEvent}
         onDelete={handleDeleteEvent}
         view_url={view_url}
+        event_name={event_name}
       />
     </div>
   );

@@ -63,7 +63,11 @@ export function SeasonsPage() {
       </div>
 
       <div className="mb-12 max-w-5xl mx-auto">
-        <EventTable event_api={SeasonApi} view_url="/seasons/{id}" />
+        <EventTable
+          event_api={SeasonApi}
+          view_url="/seasons/{id}"
+          event_name="Season"
+        />
       </div>
     </Layout>
   );
