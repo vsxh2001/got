@@ -103,7 +103,7 @@ async def delete_season(id: int, db: AsyncSession = Depends(get_session)):
     season = await db.get(Season, id)
     if season is None:
         raise HTTPException(status_code=404, detail="Season not found")
-    db.delete(season)
+    await db.delete(season)
     await db.commit()
 
 
