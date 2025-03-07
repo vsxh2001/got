@@ -1,4 +1,4 @@
-from db.models import Season, EventStatus
+from db.models import Season, EventStatus, Match
 from db.interface import get_session
 from fastapi import Depends, HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -10,7 +10,7 @@ from datetime import datetime
 router = APIRouter()
 
 
-@router.get("/seasons", response_model=List[Season])
+@router.get("/seasons", response_model=List[Season], tags=["seasons"])
 async def list_seasons(db: AsyncSession = Depends(get_session)) -> List[Season]:
     """
     Lists all seasons.
@@ -25,7 +25,7 @@ async def list_seasons(db: AsyncSession = Depends(get_session)) -> List[Season]:
     return result.all()
 
 
-@router.get("/seasons/{id}", response_model=Season)
+@router.get("/seasons/{id}", response_model=Season, tags=["seasons"])
 async def get_season(id: int, db: AsyncSession = Depends(get_session)) -> Season:
     """
     Retrieves a season by its ID.
@@ -41,7 +41,7 @@ async def get_season(id: int, db: AsyncSession = Depends(get_session)) -> Season
     return season
 
 
-@router.post("/seasons", response_model=Season)
+@router.post("/seasons", response_model=Season, tags=["seasons"])
 async def create_season(
     season: Season, db: AsyncSession = Depends(get_session)
 ) -> Season:
@@ -66,7 +66,7 @@ async def create_season(
     return season
 
 
-@router.patch("/seasons/{id}", response_model=Season)
+@router.patch("/seasons/{id}", response_model=Season, tags=["seasons"])
 async def update_season(
     id: int, season: Season, db: AsyncSession = Depends(get_session)
 ) -> Season:
@@ -91,7 +91,7 @@ async def update_season(
     return existing_season
 
 
-@router.delete("/seasons/{id}")
+@router.delete("/seasons/{id}", tags=["seasons"])
 async def delete_season(id: int, db: AsyncSession = Depends(get_session)):
     """
     Deletes a season by its ID.
@@ -107,7 +107,7 @@ async def delete_season(id: int, db: AsyncSession = Depends(get_session)):
     await db.commit()
 
 
-@router.post("/seasons/{id}/start")
+@router.post("/seasons/{id}/start", tags=["seasons"])
 async def start_season(id: int, db: AsyncSession = Depends(get_session)):
     """
     Starts a season by its ID.
@@ -131,7 +131,7 @@ async def start_season(id: int, db: AsyncSession = Depends(get_session)):
     return season
 
 
-@router.post("/seasons/{id}/end")
+@router.post("/seasons/{id}/end", tags=["seasons"])
 async def end_season(id: int, db: AsyncSession = Depends(get_session)):
     """
     Ends a season by its ID.
@@ -154,3 +154,12 @@ async def end_season(id: int, db: AsyncSession = Depends(get_session)):
     await db.commit()
     await db.refresh(season)
     return season
+
+
+@router.get("/seasons/{id}/matches", tags=["seasons"])
+async def list_matches_for_season(id: int, db: AsyncSession = Depends(get_session)):
+    season = await db.get(Season, id)
+    if season is None:
+        raise HTTPException(status_code=404, detail="Season not found")
+    result = await db.scalars(select(Match).where(Match.season_id == id))
+    return result.all()

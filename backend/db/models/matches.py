@@ -1,13 +1,13 @@
 from .event import EventStatus
-from typing import Optional, TYPE_CHECKING, List
-from sqlmodel import Relationship, DateTime, Field, Column, SQLModel
+from typing import Optional, TYPE_CHECKING
+from sqlmodel import Field, Relationship, Column, DateTime, SQLModel
 from datetime import datetime
 
 if TYPE_CHECKING:
-    from .matches import Match
+    from .seasons import Season
 
 
-class Season(SQLModel, table=True):
+class Match(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: Optional[str] = Field(index=True)
     start: Optional[datetime] = Field(
@@ -17,6 +17,5 @@ class Season(SQLModel, table=True):
         default=None, sa_column=Column(DateTime(timezone=True))
     )
     status: Optional[EventStatus] = Field(default=EventStatus.PENDING)
-    matches: Optional[List["Match"]] = Relationship(
-        back_populates="season", cascade_delete=True
-    )
+    season_id: Optional[int] = Field(default=None, foreign_key="season.id")
+    season: Optional["Season"] = Relationship(back_populates="matches")

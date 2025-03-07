@@ -2,8 +2,8 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 from db.confdb import DATABASE_URL
-from db.models.seasons import Season
 from log_utils import DB_LOGGER
+import db.models
 
 engine = create_async_engine(DATABASE_URL)
 
