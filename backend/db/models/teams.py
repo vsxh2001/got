@@ -14,6 +14,6 @@ class Team(SQLModel, table=True):
     name: Optional[str] = Field(index=True, unique=True, description="Name of the team")
     color: Optional[str] = Field(description="Color of the team")
     season_id: Optional[int] = Field(
-        foreign_key="seasons.id", description="ID of the season"
+        foreign_key="season.id", description="ID of the season"
     )
     season: Optional["Season"] = Relationship(back_populates="teams")

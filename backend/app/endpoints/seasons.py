@@ -2,7 +2,8 @@ from db.models import Season, EventStatus, Match
 from db.interface import get_session
 from fastapi import Depends, HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select, selectinload
+from sqlmodel import select
+from sqlalchemy.orm import selectinload
 from typing import List
 from fastapi import APIRouter
 from datetime import datetime
