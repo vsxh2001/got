@@ -2,7 +2,7 @@ from db.models import Season, EventStatus, Match
 from db.interface import get_session
 from fastapi import Depends, HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
+from sqlmodel import select, selectinload
 from typing import List
 from fastapi import APIRouter
 from datetime import datetime
@@ -158,8 +158,35 @@ async def end_season(id: int, db: AsyncSession = Depends(get_session)):
 
 @router.get("/seasons/{id}/matches", tags=["seasons"])
 async def list_matches_for_season(id: int, db: AsyncSession = Depends(get_session)):
-    season = await db.get(Season, id)
+    """
+    Lists all matches for a season by its ID.
+
+    Args:
+        id (int): The ID of the season.
+        db (AsyncSession): The database session.
+
+    Returns:
+        List[Match]: A list of all matches for the specified season.
+    """
+    season = await db.get(Season, id, options=[selectinload(Season.matches)])
     if season is None:
         raise HTTPException(status_code=404, detail="Season not found")
-    result = await db.scalars(select(Match).where(Match.season_id == id))
-    return result.all()
+    return season.matches
+
+
+@router.get("/seasons/{id}/teams", tags=["seasons"])
+async def list_teams_for_season(id: int, db: AsyncSession = Depends(get_session)):
+    """
+    Lists all teams for a season by its ID.
+
+    Args:
+        id (int): The ID of the season.
+        db (AsyncSession): The database session.
+
+    Returns:
+        List[Team]: A list of all teams for the specified season.
+    """
+    season = await db.get(Season, id, options=[selectinload(Season.teams)])
+    if season is None:
+        raise HTTPException(status_code=404, detail="Season not found")
+    return season.teams
