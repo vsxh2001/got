@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Event, EventStatus } from "../api_types/models";
 import { Link } from "react-router-dom";
 
@@ -41,6 +41,8 @@ const EventStatusTable = ({
   onDelete,
   view_url,
   event_name = "Event",
+  transitioningEvents,
+  newEventId,
 }: {
   events: Event[];
   status: EventStatus;
@@ -49,6 +51,8 @@ const EventStatusTable = ({
   onDelete: (id: number) => Promise<void>;
   view_url: string;
   event_name?: string;
+  transitioningEvents: Set<number>;
+  newEventId: number | null;
 }) => {
   // Track events with animation states
   const [animatingEvents, setAnimatingEvents] = useState<
@@ -68,28 +72,28 @@ const EventStatusTable = ({
 
   // Handle event start with animation
   const handleStart = async (id: number) => {
-    // Set slide out animation
-    setAnimatingEvents((prev) => ({ ...prev, [id]: "animate-slide-out-left" }));
+    // Set fade out animation
+    setAnimatingEvents((prev) => ({ ...prev, [id]: "animate-fade-out" }));
 
     // Wait for animation to complete before actual start
     setTimeout(async () => {
       await onStart(id);
-    }, 500); // Match the animation duration
+    }, 400); // Match the animation duration
   };
 
   // Handle event end with animation
   const handleEnd = async (id: number) => {
-    // Set slide out animation
-    setAnimatingEvents((prev) => ({ ...prev, [id]: "animate-slide-out-left" }));
+    // Set fade out animation
+    setAnimatingEvents((prev) => ({ ...prev, [id]: "animate-fade-out" }));
 
     // Wait for animation to complete before actual end
     setTimeout(async () => {
       await onEnd(id);
-    }, 500); // Match the animation duration
+    }, 400); // Match the animation duration
   };
 
   return (
-    <div className="mb-8">
+    <div className="mb-8 transition-smooth">
       <h2 className="text-2xl font-bold text-indigo-300 mb-4 capitalize">
         {status} {event_name}s
       </h2>
@@ -102,9 +106,13 @@ const EventStatusTable = ({
           events.map((event) => (
             <div
               key={event.id}
-              className={`bg-slate-800/50 ring-1 ring-gray-700/50 rounded-lg overflow-hidden hover:ring-indigo-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/10 ${
+              className={`bg-slate-800/50 ring-1 ring-gray-700/50 rounded-lg overflow-hidden hover:ring-indigo-500/30 transition-bounce hover:shadow-lg hover:shadow-indigo-500/10 ${
                 animatingEvents[event.id!] || "animate-fade-in"
-              }`}
+              } ${
+                transitioningEvents.has(event.id!) ? "animate-fade-out" : ""
+              } ${
+                event.id === newEventId ? "animate-pulse-highlight" : ""
+              } hover:animate-elevate`}
             >
               <div className="p-4">
                 <div className="flex justify-between items-start mb-2">
@@ -165,13 +173,11 @@ const EventStatusTable = ({
                     />
                   )}
 
-                  {status !== "completed" && (
-                    <ActionButton
-                      onClick={() => handleDelete(event.id!)}
-                      label="Delete"
-                      colorClass="bg-red-600 hover:bg-red-500 text-white"
-                    />
-                  )}
+                  <ActionButton
+                    onClick={() => handleDelete(event.id!)}
+                    label="Delete"
+                    colorClass="bg-red-600 hover:bg-red-500 text-white"
+                  />
                 </div>
               </div>
             </div>
@@ -376,6 +382,17 @@ export function EventTable({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newEventId, setNewEventId] = useState<number | null>(null);
+  const [transitioningEvents, setTransitioningEvents] = useState<Set<number>>(
+    new Set(),
+  );
+
+  // Simple function to save and restore scroll position
+  const preserveScroll = (callback: () => Promise<void>) => {
+    const scrollPosition = window.scrollY;
+    return callback().finally(() => {
+      setTimeout(() => window.scrollTo(0, scrollPosition), 50);
+    });
+  };
 
   const fetchEvents = async () => {
     try {
@@ -396,16 +413,12 @@ export function EventTable({
 
   const handleAddEvent = async (event: Omit<Event, "id">) => {
     try {
-      const newEvent = await event_api.create(event as Event);
-      // Set the new event ID to highlight it
-      setNewEventId(newEvent.id!);
-
-      // Clear the highlight after animation completes
-      setTimeout(() => {
-        setNewEventId(null);
-      }, 2000);
-
-      await fetchEvents();
+      await preserveScroll(async () => {
+        const newEvent = await event_api.create(event as Event);
+        setNewEventId(newEvent.id!);
+        setTimeout(() => setNewEventId(null), 2000);
+        await fetchEvents();
+      });
     } catch (err) {
       console.error("Error adding event:", err);
     }
@@ -413,32 +426,89 @@ export function EventTable({
 
   const handleStartEvent = async (id: number) => {
     try {
-      await event_api.start(id);
-      await fetchEvents();
+      setTransitioningEvents((prev) => new Set(prev).add(id));
+
+      // Wait for animation to complete, then make the API call
+      setTimeout(async () => {
+        await preserveScroll(async () => {
+          await event_api.start(id);
+          await fetchEvents();
+        });
+
+        // Clear transitioning state
+        setTransitioningEvents((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+      }, 400);
     } catch (err) {
       console.error("Error starting event:", err);
+      setTransitioningEvents((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
     }
   };
 
   const handleEndEvent = async (id: number) => {
     try {
-      await event_api.end(id);
-      await fetchEvents();
+      setTransitioningEvents((prev) => new Set(prev).add(id));
+
+      // Wait for animation to complete, then make the API call
+      setTimeout(async () => {
+        await preserveScroll(async () => {
+          await event_api.end(id);
+          await fetchEvents();
+        });
+
+        // Clear transitioning state
+        setTransitioningEvents((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+      }, 400);
     } catch (err) {
       console.error("Error ending event:", err);
+      setTransitioningEvents((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
     }
   };
 
   const handleDeleteEvent = async (id: number) => {
     try {
-      await event_api.delete(id);
-      await fetchEvents();
+      setTransitioningEvents((prev) => new Set(prev).add(id));
+
+      // Wait for animation to complete, then make the API call
+      setTimeout(async () => {
+        await preserveScroll(async () => {
+          await event_api.delete(id);
+          await fetchEvents();
+        });
+
+        // Clear transitioning state
+        setTransitioningEvents((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+      }, 400);
     } catch (err) {
       console.error("Error deleting event:", err);
+      setTransitioningEvents((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
     }
   };
 
-  if (loading) {
+  if (loading && events.length === 0) {
     return <div>Loading events...</div>;
   }
 
@@ -446,14 +516,24 @@ export function EventTable({
     return <div className="text-red-500">{error}</div>;
   }
 
-  const pendingEvents = events.filter((event) => event.status === "pending");
-  const ongoingEvents = events.filter((event) => event.status === "ongoing");
+  // Filter events, excluding any that are currently transitioning
+  const pendingEvents = events.filter(
+    (event) =>
+      event.status === "pending" && !transitioningEvents.has(event.id!),
+  );
+
+  const ongoingEvents = events.filter(
+    (event) =>
+      event.status === "ongoing" && !transitioningEvents.has(event.id!),
+  );
+
   const completedEvents = events.filter(
-    (event) => event.status === "completed",
+    (event) =>
+      event.status === "completed" && !transitioningEvents.has(event.id!),
   );
 
   return (
-    <div>
+    <div className="transition-smooth">
       <AddEventForm onSubmit={handleAddEvent} event_name={event_name} />
 
       <EventStatusTable
@@ -464,6 +544,8 @@ export function EventTable({
         onDelete={handleDeleteEvent}
         view_url={view_url}
         event_name={event_name}
+        transitioningEvents={transitioningEvents}
+        newEventId={newEventId}
       />
 
       <EventStatusTable
@@ -474,6 +556,8 @@ export function EventTable({
         onDelete={handleDeleteEvent}
         view_url={view_url}
         event_name={event_name}
+        transitioningEvents={transitioningEvents}
+        newEventId={newEventId}
       />
 
       <EventStatusTable
@@ -484,6 +568,8 @@ export function EventTable({
         onDelete={handleDeleteEvent}
         view_url={view_url}
         event_name={event_name}
+        transitioningEvents={transitioningEvents}
+        newEventId={newEventId}
       />
     </div>
   );
